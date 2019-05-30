@@ -1,83 +1,68 @@
-
-// Based on
-// https://techtutorialsx.com/2017/10/12/esp32-getting-started-with-the-arest-library/
-// https://randomnerdtutorials.com/esp32-web-server-arduino-ide/
-
-// To Test call the GET HTTP request
-// http://#yourIp#/test
-// http://#yourIp#/turnOn26
-// http://#yourIp#/turnOff26
-
 #include "WiFi.h"
-#include "aREST.h"
- 
-aREST rest = aREST();
- 
-WiFiServer server(80);
- 
-const char* ssid = "yourNetworkName";
-const char* password =  "yourNetworkPassword";
+#include "ESPAsyncWebServer.h"
 
+const char* ssid = "Network SSID Name";
+const char* password = "Network Password";
 
+// Variables to be exposed to the API
 // Auxiliar variables to store the current output state
 String output26State = "off";
 
 // Assign output variables to GPIO pins
 const int output26 = 26;
 
- 
-int testFunction(String command) {
-  Serial.println("Received rest request");
-}
+AsyncWebServer server(80);
+
 
 int turnOnLedFunction(String command) {
   Serial.println("Received rest request: turnOnLedFunction");
               output26State = "on";
               digitalWrite(output26, HIGH);
+  return 1;
 }
 
 int turnOffLedFunction(String command) {
   Serial.println("Received rest request: turnOffLedFunction");
               output26State = "off";
               digitalWrite(output26, LOW);
+          return 1;
 }
  
-void setup()
-{
- 
+void setup(){
   Serial.begin(115200);
-   // Initialize the output variables as outputs
+ 
+    // Initialize the output variables as outputs
   pinMode(output26, OUTPUT);
  
   // Set outputs to LOW
   digitalWrite(output26, LOW);
-
   
-  rest.function("test",testFunction);
-  rest.function("turnOn26",turnOnLedFunction);
-  rest.function("turnOff26",turnOffLedFunction);
- 
   WiFi.begin(ssid, password);
+
+
+ 
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+    delay(1000);
+    Serial.println("Connecting to WiFi..");
   }
  
-  Serial.println("WiFi connected with IP: ");
   Serial.println(WiFi.localIP());
  
+  server.on("/hello", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", "Hello World");
+  });
+
+  server.on("/turnOn26", HTTP_GET, [](AsyncWebServerRequest *request){
+    turnOnLedFunction("");
+        request-> send(200, "text/plain", "26 Turned ON");
+  });
+
+  server.on("/turnOff26", HTTP_GET, [](AsyncWebServerRequest *request){
+    turnOffLedFunction("");
+        request-> send(200, "text/plain", "26 Turned OFF");
+  });
+ 
   server.begin();
- 
 }
  
-void loop() {
- 
-  WiFiClient client = server.available();
-  if (client) {
- 
-    while(!client.available()){
-      delay(5);
-    }
-    rest.handle(client);
-  }
-}
+void loop(){}
